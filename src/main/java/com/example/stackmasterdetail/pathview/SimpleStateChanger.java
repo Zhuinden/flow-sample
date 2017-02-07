@@ -54,13 +54,19 @@ public class SimpleStateChanger
         this.baseContext = root.getContext();
     }
 
+
     @Override
     public void handleStateChange(final StateChange stateChange, final StateChanger.Callback callback) {
+        if(stateChange.topNewState().equals(stateChange.topPreviousState())) {
+            callback.stateChangeComplete();
+            return;
+        }
+
         Parcelable newKey = stateChange.topNewState();
-        View newView;
         Context context = stateChange.createContext(baseContext, newKey);
+
         int layout = getLayout(newKey);
-        newView = LayoutInflater.from(context).inflate(layout, root, false);
+        View newView = LayoutInflater.from(context).inflate(layout, root, false);
 
         View previousView = null;
         if(stateChange.topPreviousState() != null) {
@@ -69,7 +75,7 @@ public class SimpleStateChanger
         }
         backstackDelegate.restoreViewFromState(newView);
 
-        if(previousView == null || direction == StateChange.REPLACE) {
+        if(previousView == null || stateChange.getDirection() == StateChange.REPLACE) {
             root.removeAllViews();
             root.addView(newView);
             backstackDelegate.clearStatesNotIn(stateChange.getNewState());
@@ -80,7 +86,7 @@ public class SimpleStateChanger
             Utils.waitForMeasure(newView, new Utils.OnMeasuredCallback() {
                 @Override
                 public void onMeasured(View view, int width, int height) {
-                    runAnimation(root, finalPreviousView, view, direction, new StateChanger.Callback() {
+                    runAnimation(root, finalPreviousView, view, stateChange.getDirection(), new StateChanger.Callback() {
                         @Override
                         public void stateChangeComplete() {
                             root.removeView(finalPreviousView);
